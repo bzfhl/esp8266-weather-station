@@ -48,12 +48,9 @@ See more at https://blog.squix.org
 #include <Carousel.h>
 #include <ILI9341_SPI.h>
 
-
 #include "ArialRounded.h"
 #include "moonphases.h"
 #include "weathericons.h"
-
-
 
 
 #define MINI_BLACK 0
