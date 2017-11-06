@@ -24,7 +24,7 @@ See more at http://blog.squix.ch
 #define WIFI_SSID "melody2.4G"
 #define WIFI_PASS "md20120131"
 //#define WIFI_SSID "学英语找吕老师13402877882"
-//#define WIFI_PASS ""
+//#define WIFI_PASS ""111
 const int UPDATE_INTERVAL_SECS = 15 * 60; // Update every 10 minutes
 const int SLEEP_INTERVAL_SECS = 0;   // Going to Sleep after idle times, set 0 for dont sleep
 
