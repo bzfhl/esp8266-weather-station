@@ -149,6 +149,7 @@ void loop()
   drawTime();
   if (screen == 0)
   {
+  //  drawTime();
     drawNowWeather();
     screen = 1;
   }
@@ -302,19 +303,14 @@ void drawForecast()
   String degreeSign = "°C";
   for (int8_t i = 0; i < 3; i++)
   {
-    String degreeSign = "°C";
     gfx.setFont(ArialRoundedMTBold_14);
     gfx.setColor(MINI_WHITE);
     gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 56 + i * 100, positionY+5, weather.HeForecast[i].tmp_max + degreeSign);
-    printchs(weather.HeForecast[i].cond_txt_d, positionX + 56 + i * 100, positionY + 25);
+    gfx.drawString(positionX + 50 + i * 106, positionY+5, weather.HeForecast[i].tmp_max + degreeSign);
+    gfx.drawString(positionX + 50 + i * 106, positionY + 55, weather.HeForecast[i].tmp_min + degreeSign);
+    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 + i * 106, positionY + 25);
+    printchs(weather.HeForecast[i].cond_txt_n, positionX + 50 + i * 106, positionY + 75);
     gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX + i * 106, positionY);
-    // gfx.commit();
-    gfx.setFont(ArialRoundedMTBold_14);
-    gfx.setColor(MINI_WHITE);
-    gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 56 + i * 100, positionY + 55, weather.HeForecast[i].tmp_min + degreeSign);
-    printchs(weather.HeForecast[i].cond_txt_n, positionX + 56 + i * 100, positionY + 75);
     gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX + i * 106, positionY + 50);
     gfx.commit();
   }
