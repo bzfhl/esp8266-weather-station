@@ -239,7 +239,7 @@ void drawProgress(uint8_t percentage, String text)
   gfx.commit();
 }
 
-// draws the clock
+// draws the clocktest
 void drawTime()
 {
 
