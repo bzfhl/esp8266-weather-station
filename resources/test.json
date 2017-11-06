@@ -1,0 +1,80 @@
+{
+    "HeWeather6": [
+        {
+            "basic": {
+                "cid": "CN101270102",
+                "location": "龙泉驿",
+                "parent_city": "成都",
+                "admin_area": "四川",
+                "cnty": "中国",
+                "lat": "30.56064987",
+                "lon": "104.26918030",
+                "tz": "+8.0"
+            },
+            "daily_forecast": [
+                {
+                    "cond_code_d": "103",
+                    "cond_code_n": "101",
+                    "cond_txt_d": "晴间多云",
+                    "cond_txt_n": "多云",
+                    "date": "2017-11-03",
+                    "hum": "54",
+                    "pcpn": "0.0",
+                    "pop": "0",
+                    "pres": "1026",
+                    "tmp_max": "22",
+                    "tmp_min": "14",
+                    "uv_index": "5",
+                    "vis": "15",
+                    "wind_deg": "0",
+                    "wind_dir": "无持续风向",
+                    "wind_sc": "微风",
+                    "wind_spd": "6"
+                },
+                {
+                    "cond_code_d": "101",
+                    "cond_code_n": "101",
+                    "cond_txt_d": "多云",
+                    "cond_txt_n": "多云",
+                    "date": "2017-11-04",
+                    "hum": "48",
+                    "pcpn": "0.0",
+                    "pop": "0",
+                    "pres": "1026",
+                    "tmp_max": "21",
+                    "tmp_min": "15",
+                    "uv_index": "5",
+                    "vis": "19",
+                    "wind_deg": "0",
+                    "wind_dir": "无持续风向",
+                    "wind_sc": "微风",
+                    "wind_spd": "4"
+                },
+                {
+                    "cond_code_d": "101",
+                    "cond_code_n": "101",
+                    "cond_txt_d": "多云",
+                    "cond_txt_n": "多云",
+                    "date": "2017-11-05",
+                    "hum": "51",
+                    "pcpn": "0.0",
+                    "pop": "0",
+                    "pres": "1021",
+                    "tmp_max": "21",
+                    "tmp_min": "14",
+                    "uv_index": "5",
+                    "vis": "19",
+                    "wind_deg": "0",
+                    "wind_dir": "无持续风向",
+                    "wind_sc": "微风",
+                    "wind_spd": "6"
+                }
+            ],
+            "status": "ok",
+            "update": {
+                "loc": "2017-11-03 18:50",
+                "utc": "2017-11-03 10:50"
+            }
+        }
+    ]
+}

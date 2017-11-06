@@ -21,9 +21,10 @@ See more at http://blog.squix.ch
 #include <simpleDSTadjust.h>
 
 // Setup
-#define WIFI_SSID "yourssid"
-#define WIFI_PASS "yourpassw0rd"
-
+#define WIFI_SSID "melody2.4G"
+#define WIFI_PASS "md20120131"
+//#define WIFI_SSID "学英语找吕老师13402877882"
+//#define WIFI_PASS ""
 const int UPDATE_INTERVAL_SECS = 15 * 60; // Update every 10 minutes
 const int SLEEP_INTERVAL_SECS = 0;   // Going to Sleep after idle times, set 0 for dont sleep
 
@@ -41,19 +42,20 @@ const int SLEEP_INTERVAL_SECS = 0;   // Going to Sleep after idle times, set 0 f
 
 // Wunderground Settings
 // To check your settings first try them out in your browser:
-// http://api.wunderground.com/api/637ffb1314916c69/features/settings/q/query.format
-// http://api.wunderground.com/api/637ffb1314916c69/conditions/lang:CN/q/China/Chengdu.json
 // http://api.wunderground.com/api/WUNDERGROUND_API_KEY/conditions/q/WUNDERGROUND_COUNTTRY/WUNDERGROUND_CITY.json
 // e.g. http://api.wunderground.com/api/808ba87ed77c4511/conditions/q/CH/Zurich.json
-// e.g. http://api.wunderground.com/api/808ba87ed77c4511/conditions/q/CA/SAN_FRANCISCO.json <- note that in the US you use the state instead of country code
+// e.g. http://api.wunderground.com/api/637ffb1314916c69/conditions/q/CA/SAN_FRANCISCO.json <- note that in the US you use the state instead of country code
+//5,35 * * * * wget -q -O  /tmp/weather/now.json "https://free-api.heweather.com/s6/weather/now?location=CN101270102&key=5c043b56de9f4371b0c7f8bee8f5b75e"
+//10,40 8,11,18 * * * wget -q -O /tmp/weather/forecast.json "https://free-api.heweather.com/s6/weather/forecast?location=CN101270102&key=5c043b56de9f4371b0c7f8bee8f5b75e"
 
-const String DISPLAYED_CITY_NAME = "Zurich";
-const String WUNDERGRROUND_API_KEY = "<YOUR_WUNDERGROUND_API_KEY>";
-const String WUNDERGRROUND_LANGUAGE = "EN";
-const String WUNDERGROUND_COUNTRY = "CH";
-const String WUNDERGROUND_CITY = "Zurich";
 
-#define UTC_OFFSET + 1
+const String DISPLAYED_CITY_NAME = "CN101270102";
+const String WUNDERGRROUND_API_KEY = "5c043b56de9f4371b0c7f8bee8f5b75e";
+const String WUNDERGRROUND_LANGUAGE = "CN";
+const String WUNDERGROUND_COUNTRY = "CN";
+const String WUNDERGROUND_CITY = "CN101270102";
+
+#define UTC_OFFSET + 8
 struct dstRule StartRule = {"CEST", Last, Sun, Mar, 2, 3600}; // Central European Summer Time = UTC/GMT +2 hours
 struct dstRule EndRule = {"CET", Last, Sun, Oct, 2, 0};       // Central European Time = UTC/GMT +1 hour
 
