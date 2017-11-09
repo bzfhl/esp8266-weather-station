@@ -48,34 +48,34 @@ enum BUFFER_COLOR_DEPTH {
 #pragma pack(1)
 typedef struct tagRGBQUAD
 {
-	BYTE	rgbBlue;
-	BYTE	rgbGreen;
-	BYTE	rgbRed;
-	BYTE	rgbReserved;
+	uint8_t	rgbBlue;
+	uint8_t	rgbGreen;
+	uint8_t	rgbRed;
+	uint8_t	rgbReserved;
 }RGBQUAD;
 
 typedef struct  tagBITMAPFILEHEADER
 {  
-	WORD	bfType;				// 文件类型，必须是0x424D，即字符“BM”   
-	DWORD	bfSize;				// 文件大小   
-	WORD	bfReserved1;		// 保留字   
-	WORD	bfReserved2;		// 保留字   
-	DWORD	bfOffBits;			// 从文件头到实际位图数据的偏移字节数   
+	uint16_t	bfType;				// 文件类型，必须是0x424D，即字符“BM”   
+	uint32_t	bfSize;				// 文件大小   
+	uint16_t	bfReserved1;		// 保留字   
+	uint16_t	bfReserved2;		// 保留字   
+	uint32_t	bfOffBits;			// 从文件头到实际位图数据的偏移字节数   
 }BITMAPFILEHEADER;				// 位图文件头定义 
 
 typedef struct tagBITMAPINFOHEADER
 {  
-	DWORD	biSize;				// 信息头大小   
-	LONG	biWidth;			// 图像宽度   
-	LONG	biHeight;			// 图像高度   
-	WORD	biPlanes;			// 位平面数，必须为1   
-	WORD	biBitCount;			// 每像素位数: 1, 2, 4, 8, 16, 24, 32
-	DWORD	biCompression;		// 压缩类型   
-	DWORD	biSizeImage;		// 压缩图像大小字节数   
-	LONG	biXPelsPerMeter;	// 水平分辨率   
-	LONG	biYPelsPerMeter;	// 垂直分辨率   
-	DWORD	biClrUsed;			// 位图实际用到的色彩数   
-	DWORD	biClrImportant;		// 本位图中重要的色彩数   
+	uint32_t	biSize;				// 信息头大小   
+	uint32_t	biWidth;			// 图像宽度   
+	uint32_t	biHeight;			// 图像高度   
+	uint16_t	biPlanes;			// 位平面数，必须为1   
+	uint16_t	biBitCount;			// 每像素位数: 1, 2, 4, 8, 16, 24, 32
+	uint32_t	biCompression;		// 压缩类型   
+	uint32_t	biSizeImage;		// 压缩图像大小字节数   
+	uint32_t	biXPelsPerMeter;	// 水平分辨率   
+	uint32_t	biYPelsPerMeter;	// 垂直分辨率   
+	uint32_t	biClrUsed;			// 位图实际用到的色彩数   
+	uint32_t	biClrImportant;		// 本位图中重要的色彩数   
 }BITMAPINFOHEADER;				// 位图信息头定义   
 #pragma pack()
 #undef max
@@ -149,8 +149,8 @@ class MiniGrafx {
   TEXT_ALIGNMENT textAlignment;
   BITMAPFILEHEADER	*head;  
   BITMAPINFOHEADER	*info;  
-  RGBQUAD			*filepalette;   // 调色板
-  BYTE				*pixels;	// iamge pixel data
+
+  uint8_t				*pixels;	// iamge pixel data
 };
 
 #endif

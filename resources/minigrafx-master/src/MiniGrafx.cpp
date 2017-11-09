@@ -555,6 +555,8 @@ void MiniGrafx::drawBmpFromFile(String filename, uint8_t x, uint16_t y) {
   uint8_t  r, g, b;
   uint32_t pos = 0, startTime = millis();
   uint16_t paletteRGB[1 << bitsPerPixel][3];
+  head = new BITMAPFILEHEADER;
+  info = new BITMAPINFOHEADER;
   for (int i = 0; i < 1 << bitsPerPixel; i++) {
     paletteRGB[i][0] = 255 * (palette[i] & 0xF800 >> 11) / 31;
     paletteRGB[i][1] = 255 * (palette[i] & 0x7E0 >> 5) / 63;
@@ -568,58 +570,61 @@ void MiniGrafx::drawBmpFromFile(String filename, uint8_t x, uint16_t y) {
   Serial.print(filename);
   Serial.println('\'');*/
 
-  //bmpFile = SPIFFS.open(filename, "r");
+  bmpFile = SPIFFS.open(filename, "r");
   // Open requested file on SD card
   if (!bmpFile) {
     Serial.print(F("File not found"));
     return;
   }
-
+  
+    //bmpFile.read(*head, sizeof(BITMAPFILEHEADER));
+    	head->bfType=read16(bmpFile);				// 文件类型，必须是0x424D，即字符“BM”   
+		head->bfSize=read32(bmpFile);				// 文件大小   
+		head->bfReserved1=read16(bmpFile);		// 保留字   
+	head->bfReserved2=read16(bmpFile);		// 保留字   
+	head->bfOffBits=read32(bmpFile);
+    		info->biSize=read32(bmpFile);				// 信息头大小   
+		info->biWidth=read32(bmpFile);			// 图像宽度   
+		info->biHeight=read32(bmpFile);			// 图像高度   
+		info->biPlanes=read16(bmpFile);			// 位平面数，必须为1   
+		info->biBitCount=read16(bmpFile);			// 每像素位数: 1, 2, 4, 8, 16, 24, 32
+		info->biCompression=read32(bmpFile);		// 压缩类型   
+		info->biSizeImage=read32(bmpFile);		// 压缩图像大小字节数   
+		info->biXPelsPerMeter=read32(bmpFile);	// 水平分辨率   
+		info->biYPelsPerMeter=read32(bmpFile);	// 垂直分辨率   
+		info->biClrUsed=read32(bmpFile);			// 位图实际用到的色彩数   
+		info->biClrImportant=read32(bmpFile);		// 本位图中重要的色彩数   
+   // head->bmpFile.read(*info, sizeof(BITMAPINFOHEADER));
   // Parse BMP header
-  if(read16(bmpFile) == 0x4D42) { // BMP signature
+  if(head->bfType == 0x4D42) { // BMP signature
     //Serial.print(F("File size: "));
-    uint32_t filesize = read32(bmpFile);
+    uint32_t filesize = head->bfSize;
     //Serial.println(filesize);
-    (void)read32(bmpFile); // Read & ignore creator bytes
-    bmpImageoffset = read32(bmpFile); // Start of image data
+    //(void)read32(bmpFile); // Read & ignore creator bytes
+    bmpImageoffset = head->bfOffBits; // Start of image data
     //Serial.print(F("Image Offset: ")); Serial.println(bmpImageoffset, DEC);
     // Read DIB header
     //Serial.print(F("Header size: "));
-    uint32_t headerSize = read32(bmpFile);
-    bmpWidth  = read32(bmpFile);
-    bmpHeight = read32(bmpFile);
-    if(read16(bmpFile) == 1) { // # planes -- must be '1'
-      bmpDepth = read16(bmpFile); // bits per pixel
+    uint32_t headerSize = info->biSize;
+    bmpWidth  = info->biWidth;
+    bmpHeight = info->biHeight;
+    if( info->biPlanes== 1) { // # planes -- must be '1'
+      bmpDepth = info->biBitCount; // bits per pixel
       //Serial.print(F("Bit Depth: ")); Serial.println(bmpDepth);
-      if((bmpDepth == 24) && (read32(bmpFile) == 0)) { // 0 = uncompressed
-
+      if((bmpDepth == 24) && (info->biCompression == 0)) { // 0 = uncompressed
         goodBmp = true; // Supported BMP format -- proceed!
-        /*Serial.print(F("Image size: "));
-        Serial.print(bmpWidth);
-        Serial.print('x');
-        Serial.println(bmpHeight);*/
-
-        // BMP rows are padded (if needed) to 4-byte boundary
-        rowSize = (bmpWidth * 3 + 3) & ~3;
-
-        // If bmpHeight is negative, image is in top-down order.
-        // This is not canon but has been observed in the wild.
-        if(bmpHeight < 0) {
+        rowSize = (bmpWidth * 3 + 3) & ~3;// BMP rows are padded (if needed) to 4-byte boundary
+        if(bmpHeight < 0) {        // If bmpHeight is negative, image is in top-down order.        // This is not canon but has been observed in the wild.
           bmpHeight = -bmpHeight;
           flip      = false;
         }
-
-        // Crop area to be loaded
-        w = bmpWidth;
+        w = bmpWidth;// Crop area to be loaded
         h = bmpHeight;
         if((x+w-1) >= width)  w = width  - x;
         if((y+h-1) >= height) h = height - y;
-
         // Set TFT address window to clipped image bounds
         //_tft->setAddrWindow(x, y, x+w-1, y+h-1);
-
         for (row=0; row<h; row++) { // For each scanline...
-
           // Seek to start of scan line.  It might seem labor-
           // intensive to be doing this on every line, but this
           // method covers a lot of gritty details like cropping
@@ -634,19 +639,16 @@ void MiniGrafx::drawBmpFromFile(String filename, uint8_t x, uint16_t y) {
             bmpFile.seek(pos, SeekSet);
             buffidx = sizeof(sdbuffer); // Force buffer reload
           }
-
           for (col=0; col<w; col++) { // For each pixel...
             // Time to read more pixel data?
             if (buffidx >= sizeof(sdbuffer)) { // Indeed
               bmpFile.read(sdbuffer, sizeof(sdbuffer));
               buffidx = 0; // Set index to beginning
             }
-
             // Convert pixel from BMP to TFT format, push to display
             b = sdbuffer[buffidx++];
             g = sdbuffer[buffidx++];
             r = sdbuffer[buffidx++];
-
             uint32_t minDistance = 99999999L;
             for (int i = 0; i < (1 << bitsPerPixel); i++) {
               int16_t rd = (r-paletteRGB[i][0]);
@@ -666,7 +668,83 @@ void MiniGrafx::drawBmpFromFile(String filename, uint8_t x, uint16_t y) {
         /*Serial.print(F("Loaded in "));
         Serial.print(millis() - startTime);
         Serial.println(" ms");*/
-      } // end goodBmp
+      } else if((bmpDepth <= 8) && (info->biCompression == 0))
+      {
+        uint8_t  *bmpbuffer; 
+        uint8_t  Mask; 
+        uint8_t  colornum =(1<<bmpDepth);
+        int filePixelPerByte =8/bmpDepth;
+        uint8_t mixIndex= 0;
+        Mask=(0xFF<<(8-bmpDepth));
+        // if (info->biBitCount == 8)
+        // {
+          RGBQUAD	*filepalette[colornum];   // 调色板
+         // filepalette = new RGBQUAD; 
+      for (int i=0;i<colornum;i++){
+      filepalette[i]->rgbBlue= bmpFile.read();
+      filepalette[i]->rgbGreen= bmpFile.read();
+      filepalette[i]->rgbRed= bmpFile.read();
+      filepalette[i]->rgbReserved= bmpFile.read();
+     // bmpFile.read();
+      }
+          
+        // }
+
+        goodBmp = true; // Supported BMP format -- proceed!
+        rowSize = ((bmpWidth * 4 + 31)/32) *4;// BMP rows are padded (if needed) to 4-byte boundary
+        if(bmpHeight < 0) {        // If bmpHeight is negative, image is in top-down order.        // This is not canon but has been observed in the wild.
+          bmpHeight = -bmpHeight;
+          flip      = false;
+        }
+        w = bmpWidth;// Crop area to be loaded
+        h = bmpHeight;
+        if((x+w-1) >= width)  w = width  - x;
+        if((y+h-1) >= height) h = height - y;
+        // Set TFT address window to clipped image bounds
+        //_tft->setAddrWindow(x, y, x+w-1, y+h-1);
+        for (row=0; row<h; row++) { // For each scanline...
+          if(flip) // Bitmap is stored bottom-to-top order (normal BMP)
+            pos = bmpImageoffset + (bmpHeight - 1 - row) * rowSize;
+          else     // Bitmap is stored top-to-bottom
+            pos = bmpImageoffset + row * rowSize;
+          if(bmpFile.position() != pos) { // Need seek?
+            bmpFile.seek(pos, SeekSet);
+            //buffidx = sizeof(sdbuffer); // Force buffer reload
+          }
+          for (col=0; col<w; ) { // For each pixel...
+            // Time to read more pixel data?
+           // if (buffidx >= sizeof(sdbuffer)) { // Indeed
+              //bmpFile.read(sdbuffer, sizeof(sdbuffer));
+              bmpFile.read(bmpbuffer, sizeof(bmpbuffer));
+              //buffidx = 0; // Set index to beginning
+           // }
+            // Convert pixel from BMP to TFT format, push to display
+            for (int j=0;j<filePixelPerByte;j++){
+
+            mixIndex = bmpbuffer;
+            b = filepalette[mixIndex&Mask]->rgbBlue;
+            g = filepalette[mixIndex&Mask]->rgbGreen;
+            r = filepalette[mixIndex&Mask]->rgbRed; 
+            bmpbuffer=(bmpbuffer<<bmpDepth);
+            col++ 
+            uint32_t minDistance = 99999999L;
+            for (int i = 0; i < (1 << bitsPerPixel); i++) {
+              int16_t rd = (r-paletteRGB[i][0]);
+              int16_t gd = (g-paletteRGB[i][1]);
+              int16_t bd = (b-paletteRGB[i][2]);
+              uint32_t distance = rd * rd + gd * gd + bd * bd;
+              if (distance < minDistance) {
+                setColor(i);
+                minDistance = distance;
+              }
+            }
+            setPixel(col + x, row + y);
+            //_tft->pushColor(_tft->color565(r,g,b));
+            yield();
+           } // 放在循环体内
+          } // end pixel
+        } // end scanline
+      }// end goodBmp
     }
   }
 

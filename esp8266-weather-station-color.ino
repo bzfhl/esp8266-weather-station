@@ -477,8 +477,9 @@ bool printchs(String str, int x, int y, uint16_t color)
     if (x + i * 16 + 16 < positionX + 1)
       if (s[i] < 0x8000)
       {
-        s[i] = (s[i] | 0x8000);
-        gfx.drawString(x + i * 16, y, s[i]);
+      //  s[i] = string((s[i] | 0x8000));
+        
+       // gfx.drawString(x + i * 16, y, s[i]);
       }
       else
       {
@@ -488,8 +489,8 @@ bool printchs(String str, int x, int y, uint16_t color)
     {
       if (s[i] < 0x8000)
       {
-        s[i] = (s[i] | 0x8000);
-        gfx.drawString(j * 16, y + 16, s[i]);
+       // s[i] = string((s[i] | 0x8000));
+        //gfx.drawString(j * 16, y + 16, s[i]);
       }
       else
       {
