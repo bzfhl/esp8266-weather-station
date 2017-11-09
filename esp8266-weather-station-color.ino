@@ -149,7 +149,7 @@ void loop()
   drawTime();
   if (screen == 0)
   {
-  //  drawTime();
+    //  drawTime();
     drawNowWeather();
     screen = 1;
   }
@@ -306,7 +306,7 @@ void drawForecast()
     gfx.setFont(ArialRoundedMTBold_14);
     gfx.setColor(MINI_WHITE);
     gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 50 + i * 106, positionY+5, weather.HeForecast[i].tmp_max + degreeSign);
+    gfx.drawString(positionX + 50 + i * 106, positionY + 5, weather.HeForecast[i].tmp_max + degreeSign);
     gfx.drawString(positionX + 50 + i * 106, positionY + 55, weather.HeForecast[i].tmp_min + degreeSign);
     printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 + i * 106, positionY + 25);
     printchs(weather.HeForecast[i].cond_txt_n, positionX + 50 + i * 106, positionY + 75);
@@ -466,17 +466,37 @@ bool printchs(String str, int x, int y, uint16_t color)
   bool pd = false;
   Utf8ToGb2312(str.c_str(), num, s);
   int j = 0;
+  gfx.setFont(ArialRoundedMTBold_14);
+  gfx.setColor(color);
+  gfx.setTextAlignment(TEXT_ALIGN_LEFT);
   for (int i = 0; i < n; i++)
   {
     if (s[i] == 0xffff)
       break;
+
     if (x + i * 16 + 16 < positionX + 1)
-      drawchar(s[i], x + i * 16, y, color);
+      if (s[i] < 0x8000)
+      {
+        s[i] = (s[i] | 0x8000);
+        gfx.drawString(x + i * 16, y, s[i]);
+      }
+      else
+      {
+        drawchar(s[i], x + i * 16, y, color);
+      }
     else
     {
-      drawchar(s[i], j * 16, y + 16, color);
-      j++;
-      pd = true;
+      if (s[i] < 0x8000)
+      {
+        s[i] = (s[i] | 0x8000);
+        gfx.drawString(j * 16, y + 16, s[i]);
+      }
+      else
+      {
+        drawchar(s[i], j * 16, y + 16, color);
+        j++;
+        pd = true;
+      }
     }
   }
   return pd;
