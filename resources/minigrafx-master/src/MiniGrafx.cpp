@@ -721,10 +721,10 @@ void MiniGrafx::drawBmpFromFile(String filename, uint8_t x, uint16_t y) {
             // Convert pixel from BMP to TFT format, push to display
             for (int j=0;j<filePixelPerByte;j++){
 
-            mixIndex = bmpbuffer;
-            b = filepalette[mixIndex&Mask]->rgbBlue;
-            g = filepalette[mixIndex&Mask]->rgbGreen;
-            r = filepalette[mixIndex&Mask]->rgbRed; 
+            mixIndex = (*bmpbuffer&Mask)>>(8-bmpDepth);
+            b = filepalette[mixIndex]->rgbBlue;
+            g = filepalette[mixIndex]->rgbGreen;
+            r = filepalette[mixIndex]->rgbRed; 
             bmpbuffer=(bmpbuffer<<bmpDepth);
             col++ 
             uint32_t minDistance = 99999999L;
