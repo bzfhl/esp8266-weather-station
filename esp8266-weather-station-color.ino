@@ -70,8 +70,8 @@ Heweather weather;
 // Setup simpleDSTadjust Library rules
 simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
-bool printchs(String str, int x, int y, uint16_t color = MINI_WHITE);
-void drawchar(u16 chr, int x, int y, uint16_t color = MINI_WHITE);
+bool printchs(String str, int x, int y, uint16_t color = MINI_WHITE,String font="HZK16");
+void drawchar(u16 chr, int x, int y, uint16_t color = MINI_WHITE,String font="HZK16");
 void updateData();
 void drawProgress(uint8_t percentage, String text);
 void drawTime();
@@ -151,13 +151,27 @@ void loop()
   {
     //  drawTime();
     drawNowWeather();
+  // gfx.drawBmpFromFile("/test24.bmp", 50, 50);
     screen = 1;
   }
-  else
+  else if (screen == 1)
   {
     drawForecast();
-    screen = 0;
+   //gfx.drawBmpFromFile("/test8.bmp", 50, 50);
+    screen = 2;
   }
+  else if (screen == 2)
+  {
+   drawNowWeather();
+    //gfx.drawBmpFromFile("/test4.bmp", 50, 50);
+    screen = 3;
+  }
+  else if (screen == 3)
+  {
+    drawForecast();
+   //gfx.drawBmpFromFile("/test1.bmp", 50, 50);
+    screen = 0;
+  }  
   // else if (screen == 2) {
   //   drawAbout();
   // }
@@ -416,11 +430,11 @@ void drawAbout()
   gfx.drawStringMaxWidth(15, 265, 240 - 2 * 15, ESP.getResetInfo());
 }
 
-void drawchar(u16 chr, int x, int y, uint16_t color)
+void drawchar(u16 chr, int x, int y, uint16_t color,String font)
 {
   if (chr >= 0xa1a0)
   {
-    File f = SPIFFS.open("/zk/HZK16.bin", "r");
+    File f = SPIFFS.open("/zk/"+font+".bin", "r");
     // if (f)
     // {
     //   Serial.println("file open secc"); // 檔案開啟失敗
@@ -456,7 +470,7 @@ void drawchar(u16 chr, int x, int y, uint16_t color)
     f.close();
   }
 }
-bool printchs(String str, int x, int y, uint16_t color)
+bool printchs(String str, int x, int y, uint16_t color,String font)
 {
   int positionX;
   int num = str.length();
