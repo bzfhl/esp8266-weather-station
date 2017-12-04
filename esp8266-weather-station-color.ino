@@ -25,7 +25,9 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <ESP8266WiFi.h>
-
+// extern "C" {
+//   #include "user_interface.h"
+//   }
 /***
    Install the following libraries through Arduino Library Manager
    - Mini Grafx by Daniel Eichhorn
@@ -41,6 +43,8 @@
 #include "ArialRounded.h"
 #include <FS.h>
 #include "UTF-8toGB2312.h"
+//#include <TimerOne.h>
+//#include "TM1637.h"
 
 #define MINI_BLACK 0
 #define MINI_WHITE 1
@@ -49,6 +53,26 @@
 
 #define MAX_FORECASTS 3
 
+// #define ON 1
+// #define OFF 0
+
+// #define CLK D0//pins definitions for TM1637 and can be changed to other ports    
+// #define DIO A0
+// int8_t TimeDisp[] = {0x00,0x00,0x00,0x00};
+// unsigned char ClockPoint = 1;
+// unsigned char Update;
+// unsigned char halfsecond = 0;
+// unsigned char second;
+// unsigned char minute = 0;
+// unsigned char hour = 12;// #define CLK D0//pins definitions for TM1637 and can be changed to other ports    
+
+
+#include "TM1637.h"
+#define CLK D4//pins definitions for TM1637 and can be changed to other ports       
+#define DIO D0
+TM1637 tm1637(CLK,DIO);
+//static os_timer_t os_timer;
+boolean ClockPoint =true;
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
                       ILI9341_WHITE,  // 1
@@ -57,12 +81,12 @@ uint16_t palette[] = {ILI9341_BLACK,  // 0
 
 int SCREEN_WIDTH = 240;
 int SCREEN_HEIGHT = 320;
-int ROTATION = 1;
+int ROTATION = 0;
 // Limited to 4 colors due to memory constraints
 int BITS_PER_PIXEL = 2; // 2^2 =  4 colors
 
 ADC_MODE(ADC_VCC);
-
+// TM1637 tm1637(CLK,DIO);
 ILI9341_SPI tft = ILI9341_SPI(TFT_CS, TFT_DC);
 MiniGrafx gfx = MiniGrafx(&tft, BITS_PER_PIXEL, palette);
 
@@ -78,6 +102,7 @@ void drawTime();
 void drawForecast();
 void drawLabelValue(uint8_t line, String label, String value);
 void drawAbout();
+void TimeShow();
 
 // how many different screens do we have?
 int screenCount = 5;
@@ -88,6 +113,23 @@ int screen = 0;
 long timerPress;
 bool canBtnPress;
 bool isDaytime = true;
+ // static bool status = false;
+/** LED操作命令 */
+// void Led_Cmd(bool status ){
+//   if (status == true )tm1637.point(POINT_ON);
+//   else tm1637.point(POINT_OFF); 
+// }
+
+
+
+// void Led_Task_Run(void){
+//     if ( status == true ) {
+//           status = false;
+//       } else  {
+//           status = true;
+//       }
+//    Led_Cmd( status );
+// }
 
 void connectWifi()
 {
@@ -138,6 +180,20 @@ void setup()
   updateData();
   timerPress = millis();
   canBtnPress = true;
+
+  tm1637.init();
+  tm1637.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
+
+
+
+  // Led_Cmd(false);
+  
+  //        /** 关闭该定时器 */
+  //        os_timer_disarm( &os_timer );
+  //        /** 配置该定时器回调函数 */
+  //        os_timer_setfn( &os_timer, (ETSTimerFunc *) ( Led_Task_Run ), NULL );
+  //        /** 启动该定时器 */
+  //        os_timer_arm( &os_timer, 500, true );
 }
 
 long lastDrew = 0;
@@ -146,6 +202,7 @@ bool btnClick;
 void loop()
 {
   gfx.fillBuffer(MINI_BLACK);
+  TimeShow();
   drawTime();
   if (screen == 0)
   {
@@ -207,6 +264,7 @@ void loop()
   //   ESP.deepSleep(0, WAKE_RF_DEFAULT); // 0 delay = permanently to sleep
   // }
   delay(1000);
+
 }
 
 // Update the internet based information and update screen
@@ -258,52 +316,52 @@ void drawProgress(uint8_t percentage, String text)
 void drawTime()
 {
 
-  char *dstAbbrev;
-  char time_str[11];
-  time_t now = dstAdjusted.time(&dstAbbrev);
-  struct tm *timeinfo = localtime(&now);
+  // char *dstAbbrev;
+  // char time_str[11];
+  // time_t now = dstAdjusted.time(&dstAbbrev);
+  // struct tm *timeinfo = localtime(&now);
 
-  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
-  gfx.setFont(ArialRoundedMTBold_14);
-  gfx.setColor(MINI_WHITE);
-  String date = ctime(&now);
-  date = String(1900 + timeinfo->tm_year) + "-" + String(timeinfo->tm_mon + 1) + "-" + String(timeinfo->tm_mday) + " " + date.substring(0, 4);
-  gfx.drawString(160, 6, date);
+  // gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  // gfx.setFont(ArialRoundedMTBold_14);
+  // gfx.setColor(MINI_WHITE);
+  // String date = ctime(&now);
+  // date = String(1900 + timeinfo->tm_year) + "-" + String(timeinfo->tm_mon + 1) + "-" + String(timeinfo->tm_mday) + " " + date.substring(0, 4);
+  // gfx.drawString(160, 6, date);
 
-  gfx.setFont(ArialRoundedMTBold_36);
-  if (timeinfo->tm_hour > 6 && timeinfo->tm_hour < 18)
-  {
-    isDaytime = true;
-  }
-  else
-  {
-    isDaytime = false;
-  }
-  if (IS_STYLE_12HR)
-  {
-    int hour = (timeinfo->tm_hour + 11) % 12 + 1; // take care of noon and midnight
-    sprintf(time_str, "%2d:%02d:%02d\n", hour, timeinfo->tm_min, timeinfo->tm_sec);
-    gfx.drawString(160, 20, time_str);
-  }
-  else
-  {
-    sprintf(time_str, "%02d:%02d:%02d\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-    gfx.drawString(160, 20, time_str);
-  }
+  // gfx.setFont(ArialRoundedMTBold_36);
+  // if (timeinfo->tm_hour > 6 && timeinfo->tm_hour < 18)
+  // {
+  //   isDaytime = true;
+  // }
+  // else
+  // {
+  //   isDaytime = false;
+  // }
+  // if (IS_STYLE_12HR)
+  // {
+  //   int hour = (timeinfo->tm_hour + 11) % 12 + 1; // take care of noon and midnight
+  //   sprintf(time_str, "%2d:%02d:%02d\n", hour, timeinfo->tm_min, timeinfo->tm_sec);
+  //   gfx.drawString(160, 20, time_str);
+  // }
+  // else
+  // {
+  //   sprintf(time_str, "%02d:%02d:%02d\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+  //   gfx.drawString(160, 20, time_str);
+  // }
 
-  gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-  gfx.setFont(ArialMT_Plain_10);
-  gfx.setColor(MINI_BLUE);
-  if (IS_STYLE_12HR)
-  {
-    sprintf(time_str, "%s\n%s", dstAbbrev, timeinfo->tm_hour >= 12 ? "PM" : "AM");
-    gfx.drawString(260, 27, time_str);
-  }
-  else
-  {
-    sprintf(time_str, "%s", dstAbbrev);
-    gfx.drawString(260, 27, time_str); // Known bug: Cuts off 4th character of timezone abbreviation
-  }
+  // gfx.setTextAlignment(TEXT_ALIGN_LEFT);
+  // gfx.setFont(ArialMT_Plain_10);
+  // gfx.setColor(MINI_BLUE);
+  // if (IS_STYLE_12HR)
+  // {
+  //   sprintf(time_str, "%s\n%s", dstAbbrev, timeinfo->tm_hour >= 12 ? "PM" : "AM");
+  //   gfx.drawString(260, 27, time_str);
+  // }
+  // else
+  // {
+  //   sprintf(time_str, "%s", dstAbbrev);
+  //   gfx.drawString(260, 27, time_str); // Known bug: Cuts off 4th character of timezone abbreviation
+  // }
   drawWifiQuality();
 }
 
@@ -312,7 +370,7 @@ void drawTime()
 void drawForecast()
 {
   int positionX = 1;
-  int positionY = 70;
+  int positionY = 20;
   gfx.setTransparentColor(MINI_BLACK);
   String degreeSign = "°C";
   for (int8_t i = 0; i < 3; i++)
@@ -320,25 +378,25 @@ void drawForecast()
     gfx.setFont(ArialRoundedMTBold_14);
     gfx.setColor(MINI_WHITE);
     gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 50 + i * 106, positionY + 5, weather.HeForecast[i].tmp_max + degreeSign);
-    gfx.drawString(positionX + 50 + i * 106, positionY + 55, weather.HeForecast[i].tmp_min + degreeSign);
-    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 + i * 106, positionY + 25);
-    printchs(weather.HeForecast[i].cond_txt_n, positionX + 50 + i * 106, positionY + 75);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX + i * 106, positionY);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX + i * 106, positionY + 50);
+    gfx.drawString(positionX + 50 , positionY + 5+ i * 106, weather.HeForecast[i].tmp_max + degreeSign);
+    gfx.drawString(positionX + 120 , positionY + 5+ i * 106, weather.HeForecast[i].tmp_min + degreeSign);
+    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 , positionY + 25+ i * 106);
+    printchs(weather.HeForecast[i].cond_txt_n, positionX + 120 , positionY + 25+ i * 106);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX , positionY+ i * 106);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX  + 180, positionY+ i * 106);
     gfx.commit();
   }
 }
 void drawNowWeather()
 {
   gfx.setTransparentColor(MINI_BLACK);
-  gfx.drawBmpFromFile("/weather_icon/big/" + weather.now_cond_code + ".bmp", 10, 70);
+  gfx.drawBmpFromFile("/weather_icon/big/" + weather.now_cond_code + ".bmp", 10, 20);
   gfx.setFont(ArialRoundedMTBold_36);
   gfx.setColor(MINI_WHITE);
   gfx.setTextAlignment(TEXT_ALIGN_RIGHT);
   String degreeSign = "°C";
   String temp = weather.now_tmp + degreeSign;
-  gfx.drawString(220, 70, temp);
+  gfx.drawString(220, 20, temp);
   printchs(weather.now_cond_txt, 135, 110);
   //printchs(weather.now_tmp, 135, 110);
   printchs("风力：" + weather.now_wind_sc + "级", 10, 180);
@@ -382,15 +440,16 @@ void drawWifiQuality()
   int8_t quality = getWifiQuality();
   positionX = (ROTATION % 2 == 1) ? SCREEN_HEIGHT : SCREEN_WIDTH;
   gfx.setColor(MINI_WHITE);
+  gfx.setFont(ArialMT_Plain_10);
   gfx.setTextAlignment(TEXT_ALIGN_RIGHT);
-  gfx.drawString(positionX - 11, 9, String(quality) + "%");
+  gfx.drawString(positionX - 11, 1, String(quality) + "%");
   for (int8_t i = 0; i < 4; i++)
   {
     for (int8_t j = 0; j < 2 * (i + 1); j++)
     {
       if (quality > i * 25 || j == 0)
       {
-        gfx.setPixel(positionX - 10 + 2 * i, 18 - j);
+        gfx.setPixel(positionX - 10 + 2 * i, 10 - j);
       }
     }
   }
@@ -515,4 +574,91 @@ bool printchs(String str, int x, int y, uint16_t color,String font)
     }
   }
   return pd;
+}
+// void TimingISR()
+// {
+//   halfsecond ++;
+//   Update = ON;
+//   if(halfsecond == 2){
+//     second ++;
+//     if(second == 60)
+//     {
+//       minute ++;
+//       if(minute == 60)
+//       {
+//         hour ++;
+//         if(hour == 24)hour = 0;
+//         minute = 0;
+//       }
+//       second = 0;
+//     }
+//     halfsecond = 0;  
+//   }
+//  // Serial.println(second);
+//   ClockPoint = (~ClockPoint) & 0x01;
+// }
+void TimeShow()
+{
+ char *dstAbbrev;
+  char time_str[11];
+  time_t now = dstAdjusted.time(&dstAbbrev);
+  struct tm *timeinfo = localtime(&now);
+
+  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  gfx.setFont(ArialRoundedMTBold_14);
+  gfx.setColor(MINI_WHITE);
+  String date = ctime(&now);
+  date = String(1900 + timeinfo->tm_year) + "-" + String(timeinfo->tm_mon + 1) + "-" + String(timeinfo->tm_mday) + " " + date.substring(0, 4) + " " + String(timeinfo->tm_hour) + ":" + String(timeinfo->tm_min);
+  gfx.drawString(120, 1, date);
+
+  // gfx.setFont(ArialRoundedMTBold_36);
+  // if (timeinfo->tm_hour > 6 && timeinfo->tm_hour < 18)
+  // {
+  //   isDaytime = true;
+  // }
+  // else
+  // {
+  //   isDaytime = false;
+  // }
+  // if (IS_STYLE_12HR)
+  // {
+  //   int hour = (timeinfo->tm_hour + 11) % 12 + 1; // take care of noon and midnight
+  //   sprintf(time_str, "%2d:%02d:%02d\n", hour, timeinfo->tm_min, timeinfo->tm_sec);
+  //   gfx.drawString(160, 20, time_str);
+  // }
+  // else
+  // {
+  //   sprintf(time_str, "%02d:%02d:%02d\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+  //   gfx.drawString(160, 20, time_str);
+  // }
+
+  // gfx.setTextAlignment(TEXT_ALIGN_LEFT);
+  // gfx.setFont(ArialMT_Plain_10);
+  // gfx.setColor(MINI_BLUE);
+  // if (IS_STYLE_12HR)
+  // {
+  //   sprintf(time_str, "%s\n%s", dstAbbrev, timeinfo->tm_hour >= 12 ? "PM" : "AM");
+  //   gfx.drawString(260, 27, time_str);
+  // }
+  // else
+  // {
+  //   sprintf(time_str, "%s", dstAbbrev);
+  //   gfx.drawString(260, 27, time_str); // Known bug: Cuts off 4th character of timezone abbreviation
+  // }
+
+  int8_t TimeDisp[4];
+ if(ClockPoint)tm1637.point(POINT_ON);
+ else tm1637.point(POINT_OFF); 
+ ClockPoint =!ClockPoint;
+ int hour=timeinfo->tm_hour;
+ int minute=timeinfo->tm_min;
+  TimeDisp[0] = hour / 10;
+  TimeDisp[1] = hour % 10;
+  TimeDisp[2] = minute / 10;
+  TimeDisp[3] = minute % 10;
+  tm1637.display(0,TimeDisp[0]);
+  tm1637.display(1,TimeDisp[1]); 
+  tm1637.display(2,TimeDisp[2]);
+  tm1637.display(3,TimeDisp[3]);
+ // Update = OFF;
 }
