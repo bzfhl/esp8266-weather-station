@@ -25,9 +25,10 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <ESP8266WiFi.h>
-// extern "C" {
-//   #include "user_interface.h"
-//   }
+extern "C" {
+  #include "user_interface.h"
+  }
+ #include "TM1637.h" 
 /***
    Install the following libraries through Arduino Library Manager
    - Mini Grafx by Daniel Eichhorn
@@ -43,8 +44,6 @@
 #include "ArialRounded.h"
 #include <FS.h>
 #include "UTF-8toGB2312.h"
-//#include <TimerOne.h>
-//#include "TM1637.h"
 
 #define MINI_BLACK 0
 #define MINI_WHITE 1
@@ -53,25 +52,10 @@
 
 #define MAX_FORECASTS 3
 
-// #define ON 1
-// #define OFF 0
-
-// #define CLK D0//pins definitions for TM1637 and can be changed to other ports    
-// #define DIO A0
-// int8_t TimeDisp[] = {0x00,0x00,0x00,0x00};
-// unsigned char ClockPoint = 1;
-// unsigned char Update;
-// unsigned char halfsecond = 0;
-// unsigned char second;
-// unsigned char minute = 0;
-// unsigned char hour = 12;// #define CLK D0//pins definitions for TM1637 and can be changed to other ports    
-
-
-#include "TM1637.h"
 #define CLK D4//pins definitions for TM1637 and can be changed to other ports       
 #define DIO D0
 TM1637 tm1637(CLK,DIO);
-//static os_timer_t os_timer;
+os_timer_t TimerClockPoint;
 boolean ClockPoint =true;
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
@@ -103,6 +87,8 @@ void drawForecast();
 void drawLabelValue(uint8_t line, String label, String value);
 void drawAbout();
 void TimeShow();
+void TimerClockPoint_Callback(void *pArg);
+void connectWifi();
 
 // how many different screens do we have?
 int screenCount = 5;
@@ -113,49 +99,13 @@ int screen = 0;
 long timerPress;
 bool canBtnPress;
 bool isDaytime = true;
- // static bool status = false;
-/** LED操作命令 */
-// void Led_Cmd(bool status ){
-//   if (status == true )tm1637.point(POINT_ON);
-//   else tm1637.point(POINT_OFF); 
-// }
-
-
-
-// void Led_Task_Run(void){
-//     if ( status == true ) {
-//           status = false;
-//       } else  {
-//           status = true;
-//       }
-//    Led_Cmd( status );
-// }
-
-void connectWifi()
-{
-  if (WiFi.status() == WL_CONNECTED)
-    return;
-  //Manual Wifi
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  int i = 0;
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    if (i > 80)
-      i = 0;
-    drawProgress(i, "Connecting to WiFi");
-    i += 10;
-    Serial.print(".");
-  }
-}
+long lastDrew = 0;
+bool btnClick;
 
 void setup()
 {
   Serial.begin(115200);
 
-  // The LED pin needs to set HIGH
-  // Use this pin to save energy
-  // Turn on the background LED
   Serial.println(TFT_LED);
   pinMode(TFT_LED, OUTPUT);
   digitalWrite(TFT_LED, HIGH); // HIGH to Turn on;
@@ -184,20 +134,13 @@ void setup()
   tm1637.init();
   tm1637.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
 
-
-
-  // Led_Cmd(false);
-  
-  //        /** 关闭该定时器 */
-  //        os_timer_disarm( &os_timer );
-  //        /** 配置该定时器回调函数 */
-  //        os_timer_setfn( &os_timer, (ETSTimerFunc *) ( Led_Task_Run ), NULL );
-  //        /** 启动该定时器 */
-  //        os_timer_arm( &os_timer, 500, true );
+         /** 关闭该定时器 */
+  os_timer_disarm(&TimerClockPoint);
+       /** 配置该定时器回调函数 */
+  os_timer_setfn(&TimerClockPoint, TimerClockPoint_Callback, NULL);
+        /** 启动该定时器 */ 
+  os_timer_arm(&TimerClockPoint, 500, true);
 }
-
-long lastDrew = 0;
-bool btnClick;
 
 void loop()
 {
@@ -575,28 +518,6 @@ bool printchs(String str, int x, int y, uint16_t color,String font)
   }
   return pd;
 }
-// void TimingISR()
-// {
-//   halfsecond ++;
-//   Update = ON;
-//   if(halfsecond == 2){
-//     second ++;
-//     if(second == 60)
-//     {
-//       minute ++;
-//       if(minute == 60)
-//       {
-//         hour ++;
-//         if(hour == 24)hour = 0;
-//         minute = 0;
-//       }
-//       second = 0;
-//     }
-//     halfsecond = 0;  
-//   }
-//  // Serial.println(second);
-//   ClockPoint = (~ClockPoint) & 0x01;
-// }
 void TimeShow()
 {
  char *dstAbbrev;
@@ -610,46 +531,8 @@ void TimeShow()
   String date = ctime(&now);
   date = String(1900 + timeinfo->tm_year) + "-" + String(timeinfo->tm_mon + 1) + "-" + String(timeinfo->tm_mday) + " " + date.substring(0, 4) + " " + String(timeinfo->tm_hour) + ":" + String(timeinfo->tm_min);
   gfx.drawString(120, 1, date);
-
-  // gfx.setFont(ArialRoundedMTBold_36);
-  // if (timeinfo->tm_hour > 6 && timeinfo->tm_hour < 18)
-  // {
-  //   isDaytime = true;
-  // }
-  // else
-  // {
-  //   isDaytime = false;
-  // }
-  // if (IS_STYLE_12HR)
-  // {
-  //   int hour = (timeinfo->tm_hour + 11) % 12 + 1; // take care of noon and midnight
-  //   sprintf(time_str, "%2d:%02d:%02d\n", hour, timeinfo->tm_min, timeinfo->tm_sec);
-  //   gfx.drawString(160, 20, time_str);
-  // }
-  // else
-  // {
-  //   sprintf(time_str, "%02d:%02d:%02d\n", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
-  //   gfx.drawString(160, 20, time_str);
-  // }
-
-  // gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-  // gfx.setFont(ArialMT_Plain_10);
-  // gfx.setColor(MINI_BLUE);
-  // if (IS_STYLE_12HR)
-  // {
-  //   sprintf(time_str, "%s\n%s", dstAbbrev, timeinfo->tm_hour >= 12 ? "PM" : "AM");
-  //   gfx.drawString(260, 27, time_str);
-  // }
-  // else
-  // {
-  //   sprintf(time_str, "%s", dstAbbrev);
-  //   gfx.drawString(260, 27, time_str); // Known bug: Cuts off 4th character of timezone abbreviation
-  // }
-
-  int8_t TimeDisp[4];
- if(ClockPoint)tm1637.point(POINT_ON);
- else tm1637.point(POINT_OFF); 
- ClockPoint =!ClockPoint;
+  
+ int8_t TimeDisp[4];
  int hour=timeinfo->tm_hour;
  int minute=timeinfo->tm_min;
   TimeDisp[0] = hour / 10;
@@ -661,4 +544,28 @@ void TimeShow()
   tm1637.display(2,TimeDisp[2]);
   tm1637.display(3,TimeDisp[3]);
  // Update = OFF;
+}
+void TimerClockPoint_Callback(void *pArg)
+{
+  //Serial.println("Timer 1 Event");
+ if(ClockPoint)tm1637.point(POINT_ON);
+ else tm1637.point(POINT_OFF); 
+ ClockPoint =!ClockPoint;
+}
+void connectWifi()
+{
+  if (WiFi.status() == WL_CONNECTED)
+    return;
+  //Manual Wifi
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  int i = 0;
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    if (i > 80)
+      i = 0;
+    drawProgress(i, "Connecting to WiFi");
+    i += 10;
+    Serial.print(".");
+  }
 }
