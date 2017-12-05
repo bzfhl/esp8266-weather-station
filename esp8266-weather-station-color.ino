@@ -87,7 +87,8 @@ void drawForecast();
 void drawLabelValue(uint8_t line, String label, String value);
 void drawAbout();
 void TimeShow();
-void TimerClockPoint_Callback(void *pArg);
+//void TimerClockPoint_Callback(void *pArg);
+void TimerClockPoint_Callback();
 void connectWifi();
 
 // how many different screens do we have?
@@ -134,12 +135,11 @@ void setup()
   tm1637.init();
   tm1637.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
 
-         /** 关闭该定时器 */
-  os_timer_disarm(&TimerClockPoint);
-       /** 配置该定时器回调函数 */
-  os_timer_setfn(&TimerClockPoint, TimerClockPoint_Callback, NULL);
-        /** 启动该定时器 */ 
-  os_timer_arm(&TimerClockPoint, 500, true);
+        // 123_timer_arm(&TimerClockPoint, 60, true); /** 启动该定时器 */ 
+
+  // hw_timer_init(FRC1_SOURCE, 1);
+  // hw_timer_set_func(TimerClockPoint_Callback);
+  // hw_timer_arm(500000);
 }
 
 void loop()
@@ -147,6 +147,7 @@ void loop()
   gfx.fillBuffer(MINI_BLACK);
   TimeShow();
   drawTime();
+  TimerClockPoint_Callback();
   if (screen == 0)
   {
     //  drawTime();
@@ -321,14 +322,15 @@ void drawForecast()
     gfx.setFont(ArialRoundedMTBold_14);
     gfx.setColor(MINI_WHITE);
     gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 50 , positionY + 5+ i * 106, weather.HeForecast[i].tmp_max + degreeSign);
-    gfx.drawString(positionX + 120 , positionY + 5+ i * 106, weather.HeForecast[i].tmp_min + degreeSign);
-    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 , positionY + 25+ i * 106);
-    printchs(weather.HeForecast[i].cond_txt_n, positionX + 120 , positionY + 25+ i * 106);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX , positionY+ i * 106);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX  + 180, positionY+ i * 106);
-    gfx.commit();
+    gfx.drawString(positionX + 50 , positionY + 5+ i * 55, weather.HeForecast[i].tmp_max + degreeSign);
+    gfx.drawString(positionX + 120 , positionY + 5+ i * 55, weather.HeForecast[i].tmp_min + degreeSign);
+    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 , positionY + 25+ i * 55);
+    printchs(weather.HeForecast[i].cond_txt_n, positionX + 120 , positionY + 25+ i * 55);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX , positionY+ i * 55);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX  + 180, positionY+ i * 55);
+    
   }
+  gfx.commit();
 }
 void drawNowWeather()
 {
@@ -340,12 +342,12 @@ void drawNowWeather()
   String degreeSign = "°C";
   String temp = weather.now_tmp + degreeSign;
   gfx.drawString(220, 20, temp);
-  printchs(weather.now_cond_txt, 135, 110);
+  printchs(weather.now_cond_txt, 135, 60);
   //printchs(weather.now_tmp, 135, 110);
-  printchs("风力：" + weather.now_wind_sc + "级", 10, 180);
-  printchs("风向：" + weather.now_wind_dir, 10, 200);
-  printchs("相对湿度：" + weather.now_hum, 10, 220);
-  printchs("能见度：" + weather.now_vis, 10, 240);
+  printchs("风力：" + weather.now_wind_sc + "级", 10, 120);
+  printchs("风向：" + weather.now_wind_dir, 10, 150);
+  printchs("相对湿度：" + weather.now_hum, 10, 170);
+  printchs("能见度：" + weather.now_vis, 10, 190);
   gfx.commit();
 }
 void drawLabelValue(uint8_t line, String label, String value)
@@ -545,7 +547,8 @@ void TimeShow()
   tm1637.display(3,TimeDisp[3]);
  // Update = OFF;
 }
-void TimerClockPoint_Callback(void *pArg)
+//void TimerClockPoint_Callback(void *pArg)
+void TimerClockPoint_Callback()
 {
   //Serial.println("Timer 1 Event");
  if(ClockPoint)tm1637.point(POINT_ON);
