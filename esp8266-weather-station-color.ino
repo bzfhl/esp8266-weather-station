@@ -26,9 +26,10 @@
 #include <SPI.h>
 #include <ESP8266WiFi.h>
 extern "C" {
-  #include "user_interface.h"
-  }
- #include "TM1637.h" 
+#include "user_interface.h"
+//#include "hw_timer.h"
+}
+#include "TM1637.h"
 /***
    Install the following libraries through Arduino Library Manager
    - Mini Grafx by Daniel Eichhorn
@@ -52,11 +53,11 @@ extern "C" {
 
 #define MAX_FORECASTS 3
 
-#define CLK D4//pins definitions for TM1637 and can be changed to other ports       
+#define CLK D4 //pins definitions for TM1637 and can be changed to other ports
 #define DIO D0
-TM1637 tm1637(CLK,DIO);
+TM1637 tm1637(CLK, DIO);
 os_timer_t TimerClockPoint;
-boolean ClockPoint =true;
+boolean ClockPoint = true;
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
                       ILI9341_WHITE,  // 1
@@ -78,8 +79,8 @@ Heweather weather;
 // Setup simpleDSTadjust Library rules
 simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
-bool printchs(String str, int x, int y, uint16_t color = MINI_WHITE,String font="HZK16");
-void drawchar(u16 chr, int x, int y, uint16_t color = MINI_WHITE,String font="HZK16");
+bool printchs(String str, int x, int y, uint16_t color = MINI_WHITE, String font = "HZK16");
+void drawchar(u16 chr, int x, int y, uint16_t color = MINI_WHITE, String font = "HZK16");
 void updateData();
 void drawProgress(uint8_t percentage, String text);
 void drawTime();
@@ -94,7 +95,8 @@ void connectWifi();
 // how many different screens do we have?
 int screenCount = 5;
 long lastDownloadUpdate = millis();
-
+long RefreshTime = millis();
+long RefreshDisplay = millis();
 String moonAgeImage = "";
 int screen = 0;
 long timerPress;
@@ -133,67 +135,31 @@ void setup()
   canBtnPress = true;
 
   tm1637.init();
-  tm1637.set(BRIGHT_TYPICAL);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
+  tm1637.set(BRIGHT_TYPICAL); //BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
 
-        // 123_timer_arm(&TimerClockPoint, 60, true); /** 启动该定时器 */ 
-
+  // 123_timer_arm(&TimerClockPoint, 600, true); /** 启动该定时器 */
+       /** 关闭该定时器 */
+       os_timer_disarm( &TimerClockPoint );
+       /** 配置该定时器回调函数 */
+       os_timer_setfn( &TimerClockPoint, (ETSTimerFunc *) ( TimerClockPoint_Callback ), NULL );
+       /** 启动该定时器 */
+       os_timer_arm( &TimerClockPoint, 500, true );
   // hw_timer_init(FRC1_SOURCE, 1);
   // hw_timer_set_func(TimerClockPoint_Callback);
-  // hw_timer_arm(500000);
+  // hw_timer_arm(50000);
 }
 
 void loop()
 {
   gfx.fillBuffer(MINI_BLACK);
-  TimeShow();
-  drawTime();
-  TimerClockPoint_Callback();
-  if (screen == 0)
-  {
-    //  drawTime();
-    drawNowWeather();
-  // gfx.drawBmpFromFile("/test24.bmp", 50, 50);
-    screen = 1;
-  }
-  else if (screen == 1)
-  {
-    drawForecast();
-   //gfx.drawBmpFromFile("/test8.bmp", 50, 50);
-    screen = 2;
-  }
-  else if (screen == 2)
-  {
-   drawNowWeather();
-    //gfx.drawBmpFromFile("/test4.bmp", 50, 50);
-    screen = 3;
-  }
-  else if (screen == 3)
-  {
-    drawForecast();
-   //gfx.drawBmpFromFile("/test1.bmp", 50, 50);
-    screen = 0;
-  }  
+
+  // TimerClockPoint_Callback();
+
   // else if (screen == 2) {
   //   drawAbout();
   // }
 
-  // } else if (screen == 1) {
-  //  drawCurrentWeatherDetail();
-  // } else if (screen == 2) {
-  //   drawForecastTable(0);
-  // } else if (screen == 3) {
-  //   drawForecastTable(6);
-  // } else if (screen == 4) {
-  //   drawAbout();
-  // }
-  gfx.commit();
-
   // Check if we should update weather information
-  if (millis() - lastDownloadUpdate > 1000 * UPDATE_INTERVAL_SECS)
-  {
-    updateData();
-    lastDownloadUpdate = millis();
-  }
 
   // if (SLEEP_INTERVAL_SECS && millis() - timerPress >= SLEEP_INTERVAL_SECS * 1000)
   // { // after 2 minutes go to sleep
@@ -207,8 +173,49 @@ void loop()
   //   // go to deepsleep for xx minutes or 0 = permanently
   //   ESP.deepSleep(0, WAKE_RF_DEFAULT); // 0 delay = permanently to sleep
   // }
-  delay(1000);
-
+  // if (millis() - RefreshTime > 500)
+  // {
+  //   // updateData();
+  //   RefreshTime = millis();
+  //   TimerClockPoint_Callback();
+  //   TimeShow();
+  //   //drawTime();
+  //  // gfx.commit();
+  // }
+  if (millis() - RefreshDisplay > 5000)
+  {
+    //updateData();
+    RefreshDisplay = millis();
+    drawTime();
+    TimeShow();
+    switch (screen)
+    {
+    case 0:
+      drawNowWeather();
+      break;
+    case 1:
+      drawForecast();
+      break;
+    case 2:
+      drawNowWeather();
+      break;
+    case 3:
+      drawForecast();
+      break;
+    default:
+      drawNowWeather();
+      break;
+    }
+    screen=(screen>3)?0:screen+1;
+   gfx.commit();
+  }
+  
+  if (millis() - lastDownloadUpdate > 1000 * UPDATE_INTERVAL_SECS)
+  {
+    updateData();
+    lastDownloadUpdate = millis();
+  }
+  //delay(1000);
 }
 
 // Update the internet based information and update screen
@@ -322,13 +329,12 @@ void drawForecast()
     gfx.setFont(ArialRoundedMTBold_14);
     gfx.setColor(MINI_WHITE);
     gfx.setTextAlignment(TEXT_ALIGN_LEFT);
-    gfx.drawString(positionX + 50 , positionY + 5+ i * 55, weather.HeForecast[i].tmp_max + degreeSign);
-    gfx.drawString(positionX + 120 , positionY + 5+ i * 55, weather.HeForecast[i].tmp_min + degreeSign);
-    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50 , positionY + 25+ i * 55);
-    printchs(weather.HeForecast[i].cond_txt_n, positionX + 120 , positionY + 25+ i * 55);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX , positionY+ i * 55);
-    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX  + 180, positionY+ i * 55);
-    
+    gfx.drawString(positionX + 50, positionY + 5 + i * 55, weather.HeForecast[i].tmp_max + degreeSign);
+    gfx.drawString(positionX + 120, positionY + 5 + i * 55, weather.HeForecast[i].tmp_min + degreeSign);
+    printchs(weather.HeForecast[i].cond_txt_d, positionX + 50, positionY + 25 + i * 55);
+    printchs(weather.HeForecast[i].cond_txt_n, positionX + 120, positionY + 25 + i * 55);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_d + ".bmp", positionX, positionY + i * 55);
+    gfx.drawBmpFromFile("/weather_icon/small/" + weather.HeForecast[i].cond_code_n + ".bmp", positionX + 180, positionY + i * 55);
   }
   gfx.commit();
 }
@@ -344,7 +350,7 @@ void drawNowWeather()
   gfx.drawString(220, 20, temp);
   printchs(weather.now_cond_txt, 135, 60);
   //printchs(weather.now_tmp, 135, 110);
-  printchs("风力：" + weather.now_wind_sc + "级", 10, 120);
+  printchs("风力：" + weather.now_wind_sc + "级", 10, 130);
   printchs("风向：" + weather.now_wind_dir, 10, 150);
   printchs("相对湿度：" + weather.now_hum, 10, 170);
   printchs("能见度：" + weather.now_vis, 10, 190);
@@ -434,11 +440,11 @@ void drawAbout()
   gfx.drawStringMaxWidth(15, 265, 240 - 2 * 15, ESP.getResetInfo());
 }
 
-void drawchar(u16 chr, int x, int y, uint16_t color,String font)
+void drawchar(u16 chr, int x, int y, uint16_t color, String font)
 {
   if (chr >= 0xa1a0)
   {
-    File f = SPIFFS.open("/zk/"+font+".bin", "r");
+    File f = SPIFFS.open("/zk/" + font + ".bin", "r");
     // if (f)
     // {
     //   Serial.println("file open secc"); // 檔案開啟失敗
@@ -474,7 +480,7 @@ void drawchar(u16 chr, int x, int y, uint16_t color,String font)
     f.close();
   }
 }
-bool printchs(String str, int x, int y, uint16_t color,String font)
+bool printchs(String str, int x, int y, uint16_t color, String font)
 {
   int positionX;
   int num = str.length();
@@ -495,9 +501,9 @@ bool printchs(String str, int x, int y, uint16_t color,String font)
     if (x + i * 16 + 16 < positionX + 1)
       if (s[i] < 0x8000)
       {
-      //  s[i] = string((s[i] | 0x8000));
-        
-       // gfx.drawString(x + i * 16, y, s[i]);
+        //  s[i] = string((s[i] | 0x8000));
+
+        // gfx.drawString(x + i * 16, y, s[i]);
       }
       else
       {
@@ -507,7 +513,7 @@ bool printchs(String str, int x, int y, uint16_t color,String font)
     {
       if (s[i] < 0x8000)
       {
-       // s[i] = string((s[i] | 0x8000));
+        // s[i] = string((s[i] | 0x8000));
         //gfx.drawString(j * 16, y + 16, s[i]);
       }
       else
@@ -522,7 +528,7 @@ bool printchs(String str, int x, int y, uint16_t color,String font)
 }
 void TimeShow()
 {
- char *dstAbbrev;
+  char *dstAbbrev;
   char time_str[11];
   time_t now = dstAdjusted.time(&dstAbbrev);
   struct tm *timeinfo = localtime(&now);
@@ -533,27 +539,46 @@ void TimeShow()
   String date = ctime(&now);
   date = String(1900 + timeinfo->tm_year) + "-" + String(timeinfo->tm_mon + 1) + "-" + String(timeinfo->tm_mday) + " " + date.substring(0, 4) + " " + String(timeinfo->tm_hour) + ":" + String(timeinfo->tm_min);
   gfx.drawString(120, 1, date);
-  
- int8_t TimeDisp[4];
- int hour=timeinfo->tm_hour;
- int minute=timeinfo->tm_min;
-  TimeDisp[0] = hour / 10;
-  TimeDisp[1] = hour % 10;
-  TimeDisp[2] = minute / 10;
-  TimeDisp[3] = minute % 10;
-  tm1637.display(0,TimeDisp[0]);
-  tm1637.display(1,TimeDisp[1]); 
-  tm1637.display(2,TimeDisp[2]);
-  tm1637.display(3,TimeDisp[3]);
- // Update = OFF;
+
+  // int8_t TimeDisp[4];
+  // int hour = timeinfo->tm_hour;
+  // int minute = timeinfo->tm_min;
+  // TimeDisp[0] = hour / 10;
+  // TimeDisp[1] = hour % 10;
+  // TimeDisp[2] = minute / 10;
+  // TimeDisp[3] = minute % 10;
+  // tm1637.display(0, TimeDisp[0]);
+  // tm1637.display(1, TimeDisp[1]);
+  // tm1637.display(2, TimeDisp[2]);
+  // tm1637.display(3, TimeDisp[3]);
+  // Update = OFF;
 }
 //void TimerClockPoint_Callback(void *pArg)
 void TimerClockPoint_Callback()
 {
+  char *dstAbbrev;
+  char time_str[11];
+  time_t now = dstAdjusted.time(&dstAbbrev);
+  struct tm *timeinfo = localtime(&now);
+
+  if (ClockPoint)
+  tm1637.point(POINT_ON);
+else
+  tm1637.point(POINT_OFF);
+ClockPoint = !ClockPoint;
+  int8_t TimeDisp[4];
+  int hour = timeinfo->tm_hour;
+  int minute = timeinfo->tm_min;
+  TimeDisp[0] = hour / 10;
+  TimeDisp[1] = hour % 10;
+  TimeDisp[2] = minute / 10;
+  TimeDisp[3] = minute % 10;
+  tm1637.display(0, TimeDisp[0]);
+  tm1637.display(1, TimeDisp[1]);
+  tm1637.display(2, TimeDisp[2]);
+  tm1637.display(3, TimeDisp[3]);
   //Serial.println("Timer 1 Event");
- if(ClockPoint)tm1637.point(POINT_ON);
- else tm1637.point(POINT_OFF); 
- ClockPoint =!ClockPoint;
+
 }
 void connectWifi()
 {
